@@ -56,6 +56,7 @@ class Xero {
 	private $token;
 	private $signature_method;
 	private $format;
+	private $proxyurl;
 
 	public function __construct($key = false, $secret = false, $public_cert = false, $private_key = false, $format = 'json') {
 		$this->key = $key;
@@ -75,6 +76,10 @@ class Xero {
 		$this->token = new OAuthToken($this->key, $this->secret);
 		$this->signature_method  = new OAuthSignatureMethod_Xero($this->public_cert, $this->private_key);
 		$this->format = ( in_array($format, array('xml','json') ) ) ? $format : 'json' ;
+	}
+	
+	public function setProxyUrl($url) {
+		$this->proxyurl = $url;
 	}
 
 	public function __call($name, $arguments) {
@@ -164,6 +169,9 @@ class Xero {
 				curl_setopt($ch, CURLOPT_HTTPHEADER, array("If-Modified-Since: $modified_after"));
 			}
 			curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+			if ($this->proxyurl) {
+				curl_setopt($ch, CURLOPT_PROXY, $this->proxyurl);
+			}
 			$temp_xero_response = curl_exec($ch);
 			curl_close($ch);
 			if ( $acceptHeader=='pdf' ) {
@@ -229,6 +237,9 @@ class Xero {
 				curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 			}
 			curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+			if ($this->proxyurl) {
+				curl_setopt($ch, CURLOPT_PROXY, $this->proxyurl);
+			}
 			$xero_response = curl_exec($ch);
 			if (isset($fh)) fclose($fh);
 			try {
