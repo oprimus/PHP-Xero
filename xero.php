@@ -277,6 +277,61 @@ class Xero {
 		return $this->$name();
 	}
 
+	public function report($method, $criteria=array(), $acceptHeader='') {
+	
+		$xero_url = self::ENDPOINT . 'Reports/' . urlencode($method);
+		$parts = array();
+		foreach ($criteria as $key => $val) {
+			$parts[] = urlencode($key) . '=' . urlencode($val);
+		}
+		if (!empty($parts)) {
+			$xero_url .= '?' . implode('&', $parts);
+		}
+	
+		$req  = OAuthRequest::from_consumer_and_token( $this->consumer, $this->token, 'GET',$xero_url);
+		$req->sign_request($this->signature_method , $this->consumer, $this->token);
+		$ch = curl_init();
+		if ( $acceptHeader=='pdf' ) {
+			curl_setopt($ch,CURLOPT_HTTPHEADER,
+					array (
+						"Accept: application/".$acceptHeader
+					)
+				);
+			}
+		curl_setopt($ch,CURLOPT_SSL_VERIFYPEER, false);
+		curl_setopt($ch, CURLOPT_URL, $req->to_url());
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+		if ($this->proxyurl) {
+			curl_setopt($ch, CURLOPT_PROXY, $this->proxyurl);
+		}
+		$temp_xero_response = curl_exec($ch);
+		curl_close($ch);
+		if ( $acceptHeader=='pdf' ) {
+			return $temp_xero_response;
+			
+		}
+		
+		try {
+		if(@simplexml_load_string( $temp_xero_response )==false){
+			throw new XeroException($temp_xero_response);
+			$xero_xml = false;
+			}else{
+			$xero_xml = simplexml_load_string( $temp_xero_response );
+			}
+			}
+		
+		catch (XeroException $e)
+			  {
+			  return $e->getMessage() . "<br/>";
+			  }
+		
+	
+		if ( $this->format == 'xml' && isset($xero_xml) ) {
+			return $xero_xml;
+		} elseif(isset($xero_xml)) {
+			return ArrayToXML::toArray( $xero_xml );
+		}
+	}
 }
 
 //END Xero class
